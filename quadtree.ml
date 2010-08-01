@@ -83,8 +83,6 @@ let random_quadtree n =
 
 let _ = Graphics.open_graph "";;
 
-let tree = random_quadtree 20;;
-
 let display_rect r = 
   Graphics.draw_rect 
     (int_of_float r.ul.x)
@@ -93,18 +91,23 @@ let display_rect r =
     (int_of_float (r.lr.y -. r.ul.y))
 
 let rec display_tree = function
-  | Leaf (_,pos,surf) ->
+  | Leaf (values,surf) ->
       display_rect surf ;
-      Graphics.draw_circle 
-	(int_of_float pos.x) 
-	(int_of_float pos.y) 
-	3 
+      List.iter
+	(fun (_,pos) -> 
+	   Graphics.draw_circle 
+	     (int_of_float pos.x) 
+	     (int_of_float pos.y) 
+	     3)
+	values
   | Node n -> 
       display_rect n.surf ;
       display_tree n.nw ;
       display_tree n.ne ;
       display_tree n.se ;
       display_tree n.sw
+
+let tree = random_quadtree 200;;
 
 let _ = 
   Graphics.clear_graph () ;
