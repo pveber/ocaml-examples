@@ -1,6 +1,6 @@
 # A couple of prototypes in ocaml
 
 ## Quadtrees
-![Quadtree example](quadtree.png "Quadtree example")
+![Quadtree example](http://github.com/pveber/ocaml-examples/blob/master/quadtree.png "Quadtree example")
 
 
