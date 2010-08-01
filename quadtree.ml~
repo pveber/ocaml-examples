@@ -1,3 +1,36 @@
+let a = 1
+
+type 'a list = Empty | Cons of 'a * 'a list;;
+
+Empty;;
+[];;
+
+Empty = [];;
+
+let rec map f = function 
+    Empty -> Empty
+  | Cons (h, t) -> Cons (f h, map f t)
+;;
+
+type 'a tree = Empty | Node of 'a * 'a tree * 'a tree;;
+
+let rec map f = function
+    Empty -> Empty
+  | Node (n,l,r) -> Node (f n,map f l, map f r)
+;;
+
+type ('a,'b) tree = Leaf of 'b | Node of 'a * ('a,'b) tree * ('a,'b) tree
+
+
+type ('a, 'b) tree = 
+    Leaf of 'b
+  | Node of ('a,'b) node
+and ('a,'b) node = {
+  value : 'a ;
+  left : ('a, 'b) tree ;
+  right : ('a, 'b) tree
+}
+
 type vec = { x : float ; y : float }
 type rect = {
   ul : vec ;
@@ -14,7 +47,8 @@ let center rect = { x = (rect.ul.x +. rect.lr.x) /. 2. ;
 		    y = (rect.ul.y +. rect.lr.y) /. 2. }
 
 type 'a quadtree = 
-  | Leaf of ('a * vec) list * rect
+  | Empty of rect
+  | Leaf of 'a * vec * rect
   | Node of 'a quadnode
 and 'a quadnode = {
   center : vec ;
@@ -27,7 +61,8 @@ and 'a quadnode = {
 
 
 let surf = function
-  | Leaf (_,surf) -> surf
+  | Empty surf -> surf
+  | Leaf (_,_,surf) -> surf
   | Node n -> n.surf
 
 let is_inside pos n =
@@ -35,29 +70,27 @@ let is_inside pos n =
     if not (inside pos surf) 
     then raise (Invalid_argument "insert")
 
-let empty v = Leaf ([],v)
+let empty v = Empty v
 
 
-let rec insert nlimit e = function
-  | Leaf (values, surf) ->
-      if List.length values + 1 > nlimit then 
-	let c = center surf in 
-	let n = Node { center = c ;
-		       surf = surf ;
-		       nw = empty { ul = surf.ul ; lr = c } ;
-		       sw = empty { ul = { x = surf.ul.x ; y = c.y } ; lr = { x = c.x ; y = surf.lr.y } };
-		       se = empty { ul = c ; lr = surf.lr } ;
-		       ne = empty { ul = { x = c.x ; y = surf.ul.y } ; lr = { x = surf.lr.x ; y = c.y } } }
-	in List.fold_right (insert nlimit) values (insert nlimit e n)
-      else Leaf (e :: values, surf)
+let rec insert value pos = function
+    Empty surf -> Leaf (value, pos, surf)
+  | Leaf (value', pos', surf) ->
+      let c = center surf in 
+      let n = Node { center = c ;
+		     surf = surf ;
+		     nw = Empty { ul = surf.ul ; lr = c } ;
+		     sw = Empty { ul = { x = surf.ul.x ; y = c.y } ; lr = { x = c.x ; y = surf.lr.y } };
+		     se = Empty { ul = c ; lr = surf.lr } ;
+		     ne = Empty { ul = { x = c.x ; y = surf.ul.y } ; lr = { x = surf.lr.x ; y = c.y } } }
+      in insert value' pos' (insert value pos n)
   | Node n ->
-      let pos = snd e in
       let node = 
       match (pos.x < n.center.x, pos.y < n.center.y) with
-	  (true, true) -> { n with nw = insert nlimit e n.nw }
-	| (true, false) -> { n with sw = insert nlimit e n.sw }
-	| (false, false) -> { n with se = insert nlimit e n.se }
-	| (false, true) -> { n with ne = insert nlimit e n.ne }
+	  (true, true) -> { n with nw = insert value pos n.nw }
+	| (true, false) -> { n with sw = insert value pos n.sw }
+	| (false, false) -> { n with se = insert value pos n.se }
+	| (false, true) -> { n with ne = insert value pos n.ne }
       in Node node
 
 let xdim = 600.
@@ -74,7 +107,7 @@ let random_points n =
 
 let random_quadtree n = 
   Array.fold_right
-    (fun p -> insert 1 ((),p))
+    (insert ())
     (random_points n)
     (empty map_rect)
     
@@ -93,6 +126,7 @@ let display_rect r =
     (int_of_float (r.lr.y -. r.ul.y))
 
 let rec display_tree = function
+    Empty surf -> display_rect surf
   | Leaf (_,pos,surf) ->
       display_rect surf ;
       Graphics.draw_circle 
